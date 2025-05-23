@@ -23,7 +23,7 @@ else:
 IMG_SIZE = 64
 BATCH_SIZE = 64
 EPOCHS = 100
-LATENT_DIM = 32
+LATENT_DIM = 64
 
 # 3. بارگذاری و پیش‌پردازش داده‌ها
 def load_data():
@@ -50,15 +50,18 @@ with tf.device('/GPU:0' if gpus else '/CPU:0'):
         tf.keras.layers.MaxPooling2D(2),
         tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same'),
         tf.keras.layers.MaxPooling2D(2),
+        tf.keras.layers.Conv2D(128, 3, activation='relu', padding='same'),  # لایه جدید
+        tf.keras.layers.MaxPooling2D(2),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(LATENT_DIM, activation='relu')
     ])
-    
+
     # Decoder
     decoder = tf.keras.Sequential([
         tf.keras.layers.InputLayer((LATENT_DIM,)),
-        tf.keras.layers.Dense(16*16*64, activation='relu'),
-        tf.keras.layers.Reshape((16, 16, 64)),
+        tf.keras.layers.Dense(8*8*128, activation='relu'),  # تغییر این قسمت
+        tf.keras.layers.Reshape((8, 8, 128)),  # تغییر این قسمت
+        tf.keras.layers.Conv2DTranspose(128, 3, strides=2, activation='relu', padding='same'),
         tf.keras.layers.Conv2DTranspose(64, 3, strides=2, activation='relu', padding='same'),
         tf.keras.layers.Conv2DTranspose(32, 3, strides=2, activation='relu', padding='same'),
         tf.keras.layers.Conv2D(1, 3, activation='sigmoid', padding='same')
@@ -69,8 +72,8 @@ with tf.device('/GPU:0' if gpus else '/CPU:0'):
 # 5. کامپایل و آموزش با GPU
 autoencoder.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
-    loss='mse',
-    metrics=['mae']
+    loss='binary_crossentropy',
+    metrics=['accuracy']  # افزودن این قسمت
 )
 
 # ایجاد callback برای مانیتورینگ
@@ -85,6 +88,12 @@ callbacks = [
         restore_best_weights=True
     )
 ]
+def add_noise(images, noise_factor=0.2):
+    noise = tf.random.normal(shape=tf.shape(images), mean=0.0, stddev=1.0, dtype=images.dtype)
+    noisy_images = images + noise_factor * noise
+    return tf.clip_by_value(noisy_images, 0., 1.)
+X_train_noisy = add_noise(X_train)
+X_test_noisy = add_noise(X_test)
 
 # آموزش با استفاده از Dataset API برای بهینه‌سازی حافظه
 train_dataset = tf.data.Dataset.from_tensor_slices((X_train, X_train))
@@ -94,9 +103,9 @@ test_dataset = tf.data.Dataset.from_tensor_slices((X_test, X_test))
 test_dataset = test_dataset.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
 history = autoencoder.fit(
-    train_dataset,
+    train_dataset.map(lambda x, y: (add_noise(x), y)),  # اضافه کردن نویز در حین آموزش
     epochs=EPOCHS,
-    validation_data=test_dataset,
+    validation_data=test_dataset.map(lambda x, y: (add_noise(x), y)),
     callbacks=callbacks,
     verbose=1
 )
