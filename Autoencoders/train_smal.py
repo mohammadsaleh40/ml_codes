@@ -15,8 +15,8 @@ from sklearn.model_selection import train_test_split
 INPUT_DIM = 64 * 64  # 4096
 LATENT_DIM = 2      # کوچکترین فضای منطقی
 EPOCHS = 100
-ENCODER_UNITS = [2048, 1024, 512, 256]  # لایه‌های Encoder
-DECODER_UNITS = [256, 512, 1024, 2048]  # لایه‌های Decoder
+ENCODER_UNITS = [32, 16, 8, 4]  # لایه‌های Encoder
+DECODER_UNITS = [4, 8, 16, 32]  # لایه‌های Decoder
 
 # ----------------------------
 # 2. Encoder
@@ -120,6 +120,10 @@ X_train, X_test = train_test_split(images, test_size=0.2, random_state=42)
 # Dataset API
 train_dataset = tf.data.Dataset.from_tensor_slices((X_train, X_train)).shuffle(1024).batch(64).prefetch(tf.data.AUTOTUNE)
 test_dataset = tf.data.Dataset.from_tensor_slices((X_test, X_test)).batch(64)
+def add_noise_np(images, noise_factor=0.2):
+    noise = np.random.normal(size=images.shape, scale=1.0)
+    return np.clip(images + noise_factor * noise, 0., 1.)
+
 def add_noise(images, noise_factor=0.2):
     noise = tf.random.normal(shape=tf.shape(images), mean=0.0, stddev=1.0, dtype=images.dtype)
     noisy_images = images + noise_factor * noise
@@ -177,13 +181,21 @@ plt.show()
 sample_idx = np.random.choice(len(X_test_noisy), 5)
 print(sample_idx)
 test_samples = [X_test_noisy[i] for i in sample_idx]
-# بازسازی
-reconstructions = autoencoder.predict(test_samples)
+# نرمالایز و اضافه کردن بعد کانال
+original_normalized = X_test.astype('float32') / 255.0
+original_normalized = np.expand_dims(original_normalized, -1)  # شکل: (batch_size, 64, 64, 1)
+
+# اضافه کردن نویز به تصاویر
+noisy_images = add_noise_np(original_normalized)
+
+# 5. پیش‌بینی (بازسازی تصویر با استفاده از تصاویر نویزدار)
+reconstructed_images = autoencoder.predict(X_test)
 
 # نمایش با OpenCV
 for i in range(5):
-    original = (test_samples[i].squeeze() * 255).astype(np.uint8)
-    reconstructed = (reconstructions[i].squeeze() * 255).astype(np.uint8)
+    original = (noisy_images[i].squeeze() * 255).astype(np.uint8)
+    reconstructed = (reconstructed_images[i].squeeze() * 255).astype(np.uint8)
+    np.expand_dims(noisy_images, -1)  # شکل: (batch_size, 64, 64, 1)
     combined = np.hstack([original, reconstructed])
     cv2.imshow(f"Original vs Reconstructed {i}", combined)
 
@@ -191,3 +203,11 @@ for i in range(5):
     cv2.destroyAllWindows()
 # %%
 
+test_samples[1].shape
+# %%
+autoencoder.shape
+# %%
+for idx in sample_idx:
+    print(f"Shape of X_test_noisy[{idx}]: {X_test_noisy[idx].shape}")
+
+# %%

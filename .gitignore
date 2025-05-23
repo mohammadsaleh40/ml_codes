@@ -1,1 +1,6 @@
 /Autoencoders/data/
+/Autoencoders/best_autoencoder_gpu.h5
+/Autoencoders/best_autoencoder_small.h5
+/Autoencoders/autoencoder_final_gpu.h5
+/Autoencoders/best_autoencoder_large.h5
+/Autoencoders/best_autoencoder_medium.h5
