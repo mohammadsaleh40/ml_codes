@@ -12,8 +12,8 @@ from sklearn.model_selection import train_test_split
 # ----------------------------
 INPUT_DIM = 64 * 64  # 4096
 LATENT_DIM = 2       # کوچکترین فضای منطقی
-EPOCHS = 200  # یا 300
-BATCH_SIZE = 128  # تغییر این مقدار (مثلاً 128، 256، 512)
+EPOCHS = 100  # یا 300
+BATCH_SIZE = 8  # تغییر این مقدار (مثلاً 128، 256، 512)
 # %%
 # ----------------------------
 # 2. Encoder/Decoder/Autoencoder
@@ -21,19 +21,25 @@ BATCH_SIZE = 128  # تغییر این مقدار (مثلاً 128، 256، 512)
 def build_encoder():
     return tf.keras.Sequential([
         layers.Flatten(input_shape=(64, 64, 1)),
+        layers.Dense(1024, activation='relu'),
         layers.Dense(512, activation='relu'),
         layers.Dense(256, activation='relu'),
         layers.Dense(128, activation='relu'),
         layers.Dense(64, activation='relu'),
+        layers.Dense(32, activation='relu'),
+        layers.Dense(16, activation='relu'),
         layers.Dense(2, activation='linear')  # فضای Latent
     ])
 
 def build_decoder():
     return tf.keras.Sequential([
-        layers.Dense(64, activation='relu', input_shape=(2,)),
+        layers.Dense(16, activation='relu', input_shape=(2,)),
+        layers.Dense(32, activation='relu'),
+        layers.Dense(64, activation='relu'),
         layers.Dense(128, activation='relu'),
         layers.Dense(256, activation='relu'),
         layers.Dense(512, activation='relu'),
+        layers.Dense(1024, activation='relu'),
         layers.Dense(INPUT_DIM, activation='sigmoid'),
         layers.Reshape((64, 64, 1))
     ])
@@ -149,7 +155,9 @@ history = autoencoder.fit(
 # ----------------------------
 # 9. نمایش Latent Space
 # ----------------------------
+
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 latents = encoder.predict(images)
 i_values = []
@@ -163,16 +171,90 @@ for file in os.listdir("data"):
         i_values.append(i)
         j_values.append(j)
 
-plt.figure(figsize=(12, 5))
-plt.subplot(1, 2, 1)
-plt.scatter(latents[:, 0], latents[:, 1], c=i_values, cmap='viridis', s=5)
-plt.colorbar(label="i")
+# نمودار ۳ بعدی
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
 
-plt.subplot(1, 2, 2)
-plt.scatter(latents[:, 0], latents[:, 1], c=j_values, cmap='plasma', s=5)
-plt.colorbar(label="j")
+# رسم نقاط سه‌بعدی
+scatter = ax.scatter(
+    latents[:, 0],          # محور X
+    latents[:, 1],          # محور Y
+    i_values,               # محور Z (مقادیر i)
+    c=j_values,             # رنگ بر اساس j_values
+    cmap='plasma',          # نقشه رنگ (همانند بخش دوم کد قبلی)
+    s=10                    # اندازه نقاط
+)
+
+# برچسب‌ها
+ax.set_xlabel('Latent Dimension 1')
+ax.set_ylabel('Latent Dimension 2')
+ax.set_zlabel('i Values')
+plt.colorbar(scatter, label='j Values')
+
+# نمایش نمودار
+plt.title('3D Scatter Plot: i as Z-Axis, j as Color')
 plt.tight_layout()
 plt.show()
+# %%
+import os
+import numpy as np
+import pandas as pd
+import plotly.express as px
+
+
+latents = encoder.predict(images)
+i_values = []
+j_values = []
+
+# خواندن مقادیر i و j از نام فایل‌ها
+for file in os.listdir("data"):
+    if file.endswith(".png"):
+        parts = file.split("_")
+        i = int(parts[0])
+        j = int(parts[1].replace(".png", ""))
+        i_values.append(i)
+        j_values.append(j)
+
+# تبدیل latents به numpy array (در صورتی که نباشد)
+latents = np.array(latents)
+
+# ایجاد یک DataFrame برای Plotly
+df = pd.DataFrame({
+    'Latent Dimension 1': latents[:, 0],
+    'Latent Dimension 2': latents[:, 1],
+    'i Values': i_values,
+    'j Values': j_values
+})
+
+# رسم نمودار سه‌بعدی تعاملی
+fig = px.scatter_3d(
+    df,
+    x='Latent Dimension 1',
+    y='Latent Dimension 2',
+    z='i Values',
+    color='j Values',
+    color_continuous_scale='Plasma',
+    title='Interactive 3D Scatter Plot: i as Z-Axis, j as Color',
+    labels={
+        'Latent Dimension 1': 'Latent Dim 1',
+        'Latent Dimension 2': 'Latent Dim 2',
+        'i Values': 'i',
+        'j Values': 'j'
+    },
+    size_max=10  # اندازه حداکثر نقاط
+)
+
+# بهبود ظاهر نمودار
+fig.update_layout(scene=dict(
+    xaxis_title='Latent Dim 1',
+    yaxis_title='Latent Dim 2',
+    zaxis_title='i Values'),
+    height=700,
+    margin=dict(l=0, r=0, b=0, t=50)
+)
+
+# نمایش نمودار
+fig.show()
 # %%
 # ----------------------------
 # 10. نمایش تصاویر بازسازی شده

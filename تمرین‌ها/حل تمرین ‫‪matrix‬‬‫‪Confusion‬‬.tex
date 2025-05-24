@@ -1,0 +1,66 @@
+\documentclass[12pt]{article}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xepersian}
+\settextfont{Yas}
+\setdigitfont{A Iranian Sans}
+
+\title{تمرین \lr{Confusion Matrix}}
+\author{محمد صالح علی‌اکبری}
+\date{تاریخ تحویل: ۲ خرداد}
+
+\begin{document}
+	
+	\maketitle
+	
+	\section*{سؤال ۱}
+	‫مشتقات‬ ‫فرمول‬ \lr{Derivations‬‬ ‫‪Formul}‬ ‫در‬ ‫ترکیب‬ ‫بیز‬ ‫ساده‬ ‫را‬ ‫بیان‬ ‫کنید‬.
+	
+	\subsection*{پاسخ}
+	
+	با استفاده از قانون بیز برای دسته‌بندی داریم:
+	\begin{align*}
+		P(c\mid \mathbf{x}) &= \frac{P(\mathbf{x}\mid c)\,P(c)}{P(\mathbf{x})} \\
+		&= \frac{P(x_1, x_2, \dots, x_n\mid c)\,P(c)}{\sum_{c'}P(x_1, x_2, \dots, x_n\mid c')\,P(c')}.
+	\end{align*}
+	
+	اگر ویژگی‌ها شرطی مستقل فرض شوند (مدل بیز ساده)، آنگاه:
+	\[
+	P(x_1, \dots, x_n\mid c) = \prod_{i=1}^n P(x_i\mid c)
+	\]
+	و در نتیجه مدل نایو بیز خواهیم داشت:
+	\[
+	P(c\mid \mathbf{x}) = \frac{P(c)\prod_{i=1}^n P(x_i\mid c)}{\sum_{c'}P(c')\prod_{i=1}^n P(x_i\mid c')}.
+	\]
+	
+	\section*{سؤال ۲}
+	محاسبه \lr{Support} برای کلاس‌های $w_1$ و $w_2$ را با استفاده از جدول زیر انجام دهید:
+	
+	\begin{table}[h!]
+		\centering
+		\caption{ماتریس درهم‌ریختگی}
+		\begin{tabular}{c|cc|c}
+			واقعی $\backslash$ پیش‌بینی & $w_1$ & $w_2$ & جمع ردیف \\
+			\hline
+			$w_1$ & 60 & 10 & 70 \\
+			$w_2$ & 15 & 55 & 70 \\
+			\hline
+			جمع ستون & 75 & 65 & 140 \\
+		\end{tabular}
+	\end{table}
+	
+	\subsection*{پاسخ}
+	
+	تعداد کل نمونه‌ها برابر است با:
+	\[
+	N = 60 + 10 + 15 + 55 = 140
+	\]
+	
+	\begin{itemize}
+		\item \lr{Support}($w_1$) = نسبت نمونه‌های واقعی کلاس $w_1$: \[ \frac{60 + 10}{140} = \frac{70}{140} = 0.50 \]
+		\item \lr{Support}($w_2$) = نسبت نمونه‌های واقعی کلاس $w_2$: \[ \frac{15 + 55}{140} = \frac{70}{140} = 0.50 \]
+	\end{itemize}
+	
+\end{document}
